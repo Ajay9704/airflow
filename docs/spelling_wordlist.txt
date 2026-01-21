@@ -72,7 +72,6 @@ Ansible
 anyOf
 apache
 api
-autoapi
 apikey
 apis
 AppBuilder
@@ -126,6 +125,7 @@ authenticator
 Authlib
 authMechanism
 authorised
+autoapi
 autoclass
 autocommit
 autocomplete
