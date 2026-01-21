@@ -72,6 +72,7 @@ Ansible
 anyOf
 apache
 api
+autoapi
 apikey
 apis
 AppBuilder
@@ -941,6 +942,7 @@ instantiation
 integrations
 interdependencies
 internalIpOnly
+intersphinx
 ints
 intvl
 Investorise
