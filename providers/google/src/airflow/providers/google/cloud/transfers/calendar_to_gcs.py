@@ -159,7 +159,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
                 object_name=dest_file_name,
                 filename=temp_file.name,
             )
-        return dest_file_name
+        return f"gs://{self.destination_bucket}/{dest_file_name}"
 
     def execute(self, context):
         calendar_hook = GoogleCalendarHook(
@@ -186,6 +186,6 @@ class GoogleCalendarToGCSOperator(BaseOperator):
             time_zone=self.time_zone,
             updated_min=self.updated_min,
         )
-        gcs_path_to_file = self._upload_data(events)
+        gcs_uri = self._upload_data(events)
 
-        return gcs_path_to_file
+        return gcs_uri

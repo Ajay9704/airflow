@@ -194,4 +194,4 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
                         filename=os.path.join(tmp_dir, fname),
                         gzip=False,
                     )
-        return f"{self.bucket_name}/{self.object_name}"
+        return f"gs://{self.bucket_name}/{self.object_name}"
