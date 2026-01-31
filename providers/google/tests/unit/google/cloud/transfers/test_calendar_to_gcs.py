@@ -171,4 +171,3 @@ class TestGoogleCalendarToGCSOperator:
         mock_upload_data.assert_called_once_with(data)
         # Assert list is returned when unwrap_single=False
         assert result == [f"gs://{BUCKET}/{PATH}"]
-
