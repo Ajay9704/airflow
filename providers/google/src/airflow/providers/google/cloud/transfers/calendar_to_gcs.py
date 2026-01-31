@@ -138,6 +138,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         if unwrap_single is None:
             self.unwrap_single = True
             import warnings
+
             warnings.warn(
                 "The default value of unwrap_single will change from True to False in a future release. "
                 "Please set unwrap_single explicitly to avoid this warning.",
@@ -206,4 +207,3 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         if self.unwrap_single:
             return result[0]
         return result
-

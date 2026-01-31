@@ -122,7 +122,9 @@ class TestGoogleDisplayVideo360SDFtoGCSOperator:
         "airflow.providers.google.marketing_platform.operators.display_video.open",
         new_callable=mock.mock_open,
     )
-    def test_execute_with_unwrap_single_false(self, mock_open, mock_hook, gcs_hook_mock, temp_dir_mock, os_mock, zipfile_mock):
+    def test_execute_with_unwrap_single_false(
+        self, mock_open, mock_hook, gcs_hook_mock, temp_dir_mock, os_mock, zipfile_mock
+    ):
         operation = {"response": {"resourceName": RESOURCE_NAME}}
         media = mock.Mock()
 
@@ -215,5 +217,3 @@ class TestGoogleDisplayVideo360CreateSDFDownloadTaskOperator:
             body_request=body_request
         )
         mock_context["task_instance"].xcom_push.assert_called_once_with(key="name", value=test_name)
-
-
