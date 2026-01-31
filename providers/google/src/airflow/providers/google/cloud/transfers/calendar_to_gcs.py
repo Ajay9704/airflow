@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.suite.hooks.calendar import GoogleCalendarHook
@@ -164,7 +164,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
             )
         return f"gs://{self.destination_bucket}/{dest_file_name}"
 
-    def execute(self, context):
+    def execute(self, context) -> Union[str, list[str]]:
         calendar_hook = GoogleCalendarHook(
             api_version=self.api_version,
             gcp_conn_id=self.gcp_conn_id,

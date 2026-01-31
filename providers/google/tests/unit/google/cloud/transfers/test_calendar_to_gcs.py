@@ -79,7 +79,7 @@ class TestGoogleCalendarToGCSOperator(unittest.TestCase):
     def test_execute_with_unwrap_single_true(self, mock_upload_data, mock_calendar_hook):
         context = {}
         data = [EVENT]
-        mock_upload_data.side_effect = f"gs://{BUCKET}/{PATH}"
+        mock_upload_data.return_value = f"gs://{BUCKET}/{PATH}"
         mock_calendar_hook.return_value.get_events.return_value = data
 
         op = GoogleCalendarToGCSOperator(

@@ -23,7 +23,7 @@ import os
 import tempfile
 import zipfile
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.marketing_platform.hooks.display_video import GoogleDisplayVideo360Hook
@@ -159,7 +159,7 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
         self.impersonation_chain = impersonation_chain
         self.unwrap_single = unwrap_single
 
-    def execute(self, context: Context) -> str:
+    def execute(self, context: Context) -> Union[str, list[str]]:
         hook = GoogleDisplayVideo360Hook(
             gcp_conn_id=self.gcp_conn_id,
             api_version=self.api_version,
