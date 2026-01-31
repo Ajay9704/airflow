@@ -191,7 +191,8 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         )
         gcs_uri = self._upload_data(events)
         result = [gcs_uri]
-        
+
         if self.unwrap_single:
             return gcs_uri
         return result
+

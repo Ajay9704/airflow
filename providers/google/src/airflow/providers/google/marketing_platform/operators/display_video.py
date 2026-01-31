@@ -198,7 +198,8 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
                         gzip=False,
                     )
         result = [f"gs://{self.bucket_name}/{self.object_name}"]
-        
+
         if self.unwrap_single:
             return f"gs://{self.bucket_name}/{self.object_name}"
         return result
+
