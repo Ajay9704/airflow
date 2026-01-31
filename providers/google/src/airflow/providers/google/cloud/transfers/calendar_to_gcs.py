@@ -75,6 +75,8 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         If set as a sequence, the identities from the list must grant
         Service Account Token Creator IAM role to the directly preceding identity, with first
         account from the list granting this role to the originating account (templated).
+    :param unwrap_single: If True (default), returns a single URI string when there's only one file.
+        If False, always returns a list of URIs. Default will change to False in a future release.
     """
 
     template_fields = [
@@ -82,7 +84,6 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         "destination_bucket",
         "destination_path",
         "impersonation_chain",
-        "unwrap_single",
     ]
 
     def __init__(
@@ -109,7 +110,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         destination_path: str | None = None,
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
-        unwrap_single: bool = True,
+        unwrap_single: bool | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -134,7 +135,17 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         self.destination_bucket = destination_bucket
         self.destination_path = destination_path
         self.impersonation_chain = impersonation_chain
-        self.unwrap_single = unwrap_single
+        if unwrap_single is None:
+            self.unwrap_single = True
+            import warnings
+            warnings.warn(
+                "The default value of unwrap_single will change from True to False in a future release. "
+                "Please set unwrap_single explicitly to avoid this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        else:
+            self.unwrap_single = unwrap_single
 
     def _upload_data(
         self,
@@ -193,6 +204,6 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         result = [gcs_uri]
 
         if self.unwrap_single:
-            return gcs_uri
+            return result[0]
         return result
 

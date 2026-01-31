@@ -351,3 +351,4 @@ For example, to print all routes, run:
 .. code-block:: bash
 
     FLASK_APP=airflow.www.app:create_app flask routes
+
