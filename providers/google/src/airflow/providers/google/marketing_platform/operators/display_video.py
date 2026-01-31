@@ -23,7 +23,7 @@ import os
 import tempfile
 import zipfile
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.marketing_platform.hooks.display_video import GoogleDisplayVideo360Hook
@@ -161,6 +161,7 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
         if unwrap_single is None:
             self.unwrap_single = True
             import warnings
+
             warnings.warn(
                 "The default value of unwrap_single will change from True to False in a future release. "
                 "Please set unwrap_single explicitly to avoid this warning.",
@@ -213,4 +214,3 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
         if self.unwrap_single:
             return result[0]
         return result
-

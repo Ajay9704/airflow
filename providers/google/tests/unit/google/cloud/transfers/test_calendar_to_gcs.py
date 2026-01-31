@@ -17,8 +17,6 @@
 
 from __future__ import annotations
 
-import json
-import unittest
 from unittest import mock
 
 from airflow.providers.google.cloud.transfers.calendar_to_gcs import GoogleCalendarToGCSOperator
@@ -32,7 +30,7 @@ GCP_CONN_ID = "test"
 IMPERSONATION_CHAIN = ["account1", "account2"]
 
 
-class TestGoogleCalendarToGCSOperator(unittest.TestCase):
+class TestGoogleCalendarToGCSOperator:
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.NamedTemporaryFile")
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.json")
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GCSHook")
@@ -40,7 +38,7 @@ class TestGoogleCalendarToGCSOperator(unittest.TestCase):
     def test_upload_data(self, mock_calendar_hook, mock_gcs_hook, mock_json, mock_temp_file):
         expected_dest_file = f"{CALENDAR_ID}.json".replace(" ", "_")
         expected_dest_file = f"{PATH.strip('/')}/{expected_dest_file}"
-        
+
         mock_calendar_hook.return_value.get_events.return_value = [EVENT]
         mock_gcs_hook.return_value.upload.return_value = None
         file_handle = mock_temp_file.return_value.__enter__.return_value
@@ -174,4 +172,3 @@ class TestGoogleCalendarToGCSOperator(unittest.TestCase):
         # Assert list is returned when unwrap_single=False
         assert result == [f"gs://{BUCKET}/{PATH}"]
 
-        
