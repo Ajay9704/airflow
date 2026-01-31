@@ -133,6 +133,7 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
         "bucket_name",
         "object_name",
         "impersonation_chain",
+        "unwrap_single",
     )
 
     def __init__(
@@ -145,6 +146,7 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
         api_version: str = "v4",
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
+        unwrap_single: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -155,6 +157,7 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
         self.api_version = api_version
         self.gcp_conn_id = gcp_conn_id
         self.impersonation_chain = impersonation_chain
+        self.unwrap_single = unwrap_single
 
     def execute(self, context: Context) -> str:
         hook = GoogleDisplayVideo360Hook(
@@ -194,4 +197,8 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
                         filename=os.path.join(tmp_dir, fname),
                         gzip=False,
                     )
-        return f"gs://{self.bucket_name}/{self.object_name}"
+        result = [f"gs://{self.bucket_name}/{self.object_name}"]
+        
+        if self.unwrap_single:
+            return f"gs://{self.bucket_name}/{self.object_name}"
+        return result

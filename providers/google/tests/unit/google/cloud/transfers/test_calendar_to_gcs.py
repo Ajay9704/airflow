@@ -59,6 +59,7 @@ class TestGoogleCalendarToGCSOperator:
             destination_path=PATH,
             gcp_conn_id=GCP_CONN_ID,
             impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=True,
         )
 
         result = op._upload_data(
@@ -75,7 +76,44 @@ class TestGoogleCalendarToGCSOperator:
         )
 
         # Assert path to file is returned
-        assert result == expected_dest_file
+        assert result == f"gs://{BUCKET}/{expected_dest_file}"
+
+    @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GCSHook")
+    @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.NamedTemporaryFile")
+    def test_upload_data_with_unwrap_single_false(self, mock_tempfile, mock_gcs_hook):
+        filename = "file://97g23r"
+        file_handle = mock.MagicMock()
+        mock_tempfile.return_value.__enter__.return_value = file_handle
+        mock_tempfile.return_value.__enter__.return_value.name = filename
+
+        expected_dest_file = f"{PATH}/{CALENDAR_ID}.json"
+
+        op = GoogleCalendarToGCSOperator(
+            api_version=API_VERSION,
+            task_id="test_task",
+            calendar_id=CALENDAR_ID,
+            destination_bucket=BUCKET,
+            destination_path=PATH,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=False,
+        )
+
+        result = op._upload_data(
+            events=[EVENT],
+        )
+
+        # Test writing to file
+        file_handle.flush.assert_called_once_with()
+
+        # Test GCS Hook
+        mock_gcs_hook.assert_called_once_with(
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+        )
+
+        # Assert list is returned when unwrap_single=False
+        assert result == [f"gs://{BUCKET}/{expected_dest_file}"]
 
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarHook")
     @mock.patch(
@@ -84,7 +122,7 @@ class TestGoogleCalendarToGCSOperator:
     def test_execute(self, mock_upload_data, mock_calendar_hook):
         context = {}
         data = [EVENT]
-        mock_upload_data.side_effect = PATH
+        mock_upload_data.side_effect = f"gs://{BUCKET}/{PATH}"
         mock_calendar_hook.return_value.get_events.return_value = data
 
         op = GoogleCalendarToGCSOperator(
@@ -95,6 +133,7 @@ class TestGoogleCalendarToGCSOperator:
             destination_path=PATH,
             gcp_conn_id=GCP_CONN_ID,
             impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=True,
         )
         op.execute(context)
 
@@ -124,3 +163,53 @@ class TestGoogleCalendarToGCSOperator:
         )
 
         mock_upload_data.assert_called_once_with(data)
+
+    @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarHook")
+    @mock.patch(
+        "airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarToGCSOperator._upload_data"
+    )
+    def test_execute_with_unwrap_single_false(self, mock_upload_data, mock_calendar_hook):
+        context = {}
+        data = [EVENT]
+        mock_upload_data.side_effect = [f"gs://{BUCKET}/{PATH}"]
+        mock_calendar_hook.return_value.get_events.return_value = data
+
+        op = GoogleCalendarToGCSOperator(
+            api_version=API_VERSION,
+            task_id="test_task",
+            calendar_id=CALENDAR_ID,
+            destination_bucket=BUCKET,
+            destination_path=PATH,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=False,
+        )
+        result = op.execute(context)
+
+        mock_calendar_hook.assert_called_once_with(
+            api_version=API_VERSION,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+        )
+
+        mock_calendar_hook.return_value.get_events.assert_called_once_with(
+            calendar_id=CALENDAR_ID,
+            i_cal_uid=None,
+            max_attendees=None,
+            max_results=None,
+            order_by=None,
+            private_extended_property=None,
+            q=None,
+            shared_extended_property=None,
+            show_deleted=None,
+            show_hidden_invitation=None,
+            single_events=None,
+            sync_token=None,
+            time_max=None,
+            time_min=None,
+            time_zone=None,
+            updated_min=None,
+        )
+
+        mock_upload_data.assert_called_once_with(data)
+        assert result == [f"gs://{BUCKET}/{PATH}"]

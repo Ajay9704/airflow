@@ -82,6 +82,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         "destination_bucket",
         "destination_path",
         "impersonation_chain",
+        "unwrap_single",
     ]
 
     def __init__(
@@ -108,6 +109,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         destination_path: str | None = None,
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
+        unwrap_single: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -132,6 +134,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         self.destination_bucket = destination_bucket
         self.destination_path = destination_path
         self.impersonation_chain = impersonation_chain
+        self.unwrap_single = unwrap_single
 
     def _upload_data(
         self,
@@ -187,5 +190,8 @@ class GoogleCalendarToGCSOperator(BaseOperator):
             updated_min=self.updated_min,
         )
         gcs_uri = self._upload_data(events)
-
-        return gcs_uri
+        result = [gcs_uri]
+        
+        if self.unwrap_single:
+            return gcs_uri
+        return result
