@@ -1,4 +1,3 @@
-
 /*!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 import { Center, Flex } from "@chakra-ui/react";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ import { useRef, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { useContainerWidth } from "src/utils";
-import { lte } from "semver";
+import { coerce, lte } from "semver";
 
 type Props = {
   readonly tabs: Array<{ icon?: ReactNode; label: string; value: string }>;
@@ -34,7 +34,7 @@ export const NavTabs = ({ tabs }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerWidth = useContainerWidth(containerRef);
 
-  const { data } = useQuery<{version: string, git_version: string | null}>({
+  const { data } = useQuery<{ version: string; git_version: string | null }>({
     queryFn: async () => {
       const res = await axios.get("/api/v2/version");
       return res.data;
@@ -42,40 +42,48 @@ export const NavTabs = ({ tabs }: Props) => {
     queryKey: ["appVersion"],
   });
 
-  let legacyRouterNavigation: boolean | undefined = undefined;
+  let legacyRouterNavigation: boolean | undefined;
 
   if (data) {
-    const airflowCoreVersion = data.version;
-    // Extract major.minor.patch without pre-release identifiers for comparison
-    const baseVersion = airflowCoreVersion.split('-')[0].split('+')[0]; // Remove pre-release and build metadata
-    if (lte(baseVersion, "3.1.6")) {
-      legacyRouterNavigation = true;
-    } else {
-     legacyRouterNavigation = false;
+    // Normalize Airflow version using coerce():
+    // Extracts base version from pre-release formats like "3.1.7rc1" → "3.1.7"
+    const coercedVersion = coerce(data.version);
+    const airflowCoreVersion = coercedVersion?.version ?? null;
+
+    if (airflowCoreVersion) {
+      legacyRouterNavigation = lte(airflowCoreVersion, "3.1.6");
     }
   }
 
   return (
     <Flex alignItems="center" borderBottomWidth={1} mb={2} ref={containerRef}>
-      {legacyRouterNavigation !== undefined ? tabs.map(({ icon, label, value }) => (
-        <NavLink end key={value} title={label} to={legacyRouterNavigation ? value : `../${value}`} relative={legacyRouterNavigation ? "route" : "path"}>
-          {({ isActive }) => (
-            <Center
-              borderBottomColor="border.info"
-              borderBottomWidth={isActive ? 3 : 0}
-              color={isActive ? "fg" : "fg.muted"}
-              fontWeight="bold"
-              height="40px"
-              mb="-2px" // Show the border on top of its parent's border
-              pb={isActive ? 0 : "3px"}
-              px={4}
-              transition="all 0.2s ease"
-            >
-              {containerWidth > 600 || !icon ? label : icon}
-            </Center>
-          )}
-        </NavLink>
-      )): undefined}
+      {legacyRouterNavigation !== undefined
+        ? tabs.map(({ icon, label, value }) => (
+          <NavLink
+            end
+            key={value}
+            title={label}
+            to={legacyRouterNavigation ? value : `../${value}`}
+            relative={legacyRouterNavigation ? "route" : "path"}
+          >
+            {({ isActive }) => (
+              <Center
+                borderBottomColor="border.info"
+                borderBottomWidth={isActive ? 3 : 0}
+                color={isActive ? "fg" : "fg.muted"}
+                fontWeight="bold"
+                height="40px"
+                mb="-2px"
+                pb={isActive ? 0 : "3px"}
+                px={4}
+                transition="all 0.2s ease"
+              >
+                {containerWidth > 600 || !icon ? label : icon}
+              </Center>
+            )}
+          </NavLink>
+        ))
+        : undefined}
     </Flex>
   );
 };
