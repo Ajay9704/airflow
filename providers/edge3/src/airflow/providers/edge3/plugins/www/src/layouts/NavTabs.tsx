@@ -1,3 +1,4 @@
+
 /*!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -47,7 +48,6 @@ export const NavTabs = ({ tabs }: Props) => {
     const airflowCoreVersion = data.version;
     // Extract major.minor.patch without pre-release identifiers for comparison
     const baseVersion = airflowCoreVersion.split('-')[0].split('+')[0]; // Remove pre-release and build metadata
-    
     if (lte(baseVersion, "3.1.6")) {
       legacyRouterNavigation = true;
     } else {
