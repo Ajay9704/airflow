@@ -23,17 +23,16 @@
 from __future__ import annotations
 
 
-def is_version_at_least(base_version: tuple[int, int, int]) -> bool:
+def get_base_airflow_version_tuple() -> tuple[int, int, int]:
     from packaging.version import Version
 
     from airflow import __version__
 
-    current_version = Version(__version__)
-    # Compare the release components only (major.minor.patch), ignoring pre-releases
-    return current_version.release >= base_version
+    airflow_version = Version(__version__)
+    return airflow_version.major, airflow_version.minor, airflow_version.micro
 
 
-AIRFLOW_V_3_1_PLUS = is_version_at_least((3, 1, 0))
+AIRFLOW_V_3_1_PLUS = get_base_airflow_version_tuple() >= (3, 1, 0)
 
 __all__ = [
     "AIRFLOW_V_3_1_PLUS",

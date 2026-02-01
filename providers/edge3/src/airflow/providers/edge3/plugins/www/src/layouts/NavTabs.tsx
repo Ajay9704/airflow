@@ -45,7 +45,10 @@ export const NavTabs = ({ tabs }: Props) => {
 
   if (data) {
     const airflowCoreVersion = data.version;
-    if (lte(airflowCoreVersion, "3.1.6")) {
+    // Extract major.minor.patch without pre-release identifiers for comparison
+    const baseVersion = airflowCoreVersion.split('-')[0].split('+')[0]; // Remove pre-release and build metadata
+    
+    if (lte(baseVersion, "3.1.6")) {
       legacyRouterNavigation = true;
     } else {
      legacyRouterNavigation = false;
