@@ -23,18 +23,19 @@
 from __future__ import annotations
 
 
-def get_base_airflow_version_tuple() -> tuple[int, int, int]:
+def is_version_at_least(base_version: tuple[int, int, int]) -> bool:
     from packaging.version import Version
 
     from airflow import __version__
 
-    airflow_version = Version(__version__)
-    return airflow_version.major, airflow_version.minor, airflow_version.micro
+    current_version = Version(__version__)
+    # Compare the release components only (major.minor.patch), ignoring pre-releases
+    return current_version.release >= base_version
 
 
-AIRFLOW_V_3_0_PLUS: bool = get_base_airflow_version_tuple() >= (3, 0, 0)
-AIRFLOW_V_3_1_PLUS: bool = get_base_airflow_version_tuple() >= (3, 1, 0)
-AIRFLOW_V_3_2_PLUS: bool = get_base_airflow_version_tuple() >= (3, 2, 0)
+AIRFLOW_V_3_0_PLUS: bool = is_version_at_least((3, 0, 0))
+AIRFLOW_V_3_1_PLUS: bool = is_version_at_least((3, 1, 0))
+AIRFLOW_V_3_2_PLUS: bool = is_version_at_least((3, 2, 0))
 
 # BaseOperator removed from version_compat to avoid circular imports
 # Import it directly in files that need it instead
