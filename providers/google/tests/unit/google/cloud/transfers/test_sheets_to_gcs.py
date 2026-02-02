@@ -81,7 +81,7 @@ class TestGoogleSheetsToGCSOperator:
     @mock.patch(
         "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
     )
-    def test_execute(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
+    def test_execute_with_unwrap_single_true_multiple_files(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
         mock_ti = mock.MagicMock()
         mock_context = {"ti": mock_ti}
         data = ["data1", "data2"]
@@ -97,8 +97,9 @@ class TestGoogleSheetsToGCSOperator:
             destination_path=PATH,
             gcp_conn_id=GCP_CONN_ID,
             impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=True,
         )
-        op.execute(mock_context)
+        result = op.execute(mock_context)
 
         mock_sheet_hook.assert_called_once_with(
             gcp_conn_id=GCP_CONN_ID,
@@ -124,4 +125,63 @@ class TestGoogleSheetsToGCSOperator:
         actual_call_count = mock_upload_data.call_count
         assert len(RANGES) == actual_call_count
 
-        mock_ti.xcom_push.assert_called_once_with(key="destination_objects", value=[PATH, PATH])
+        expected_uris = [f"gs://{BUCKET}/{PATH}", f"gs://{BUCKET}/{PATH}"]
+        mock_ti.xcom_push.assert_called_once_with(key="destination_objects", value=expected_uris)
+        # When multiple files and unwrap_single=True, should return the full list
+        assert result == expected_uris
+    
+    @mock.patch(
+        "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
+    )
+    def test_execute_with_unwrap_single_true_single_file(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
+        mock_ti = mock.MagicMock()
+        mock_context = {"ti": mock_ti}
+        data = ["data1"]
+        mock_sheet_hook.return_value.get_sheet_titles.return_value = ["single_range"]
+        mock_sheet_hook.return_value.get_values.side_effect = data
+        mock_upload_data.side_effect = [PATH]
+
+        op = GoogleSheetsToGCSOperator(
+            task_id="test_task",
+            spreadsheet_id=SPREADSHEET_ID,
+            destination_bucket=BUCKET,
+            sheet_filter=FILTER,
+            destination_path=PATH,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=True,
+        )
+        result = op.execute(mock_context)
+
+        expected_uri = f"gs://{BUCKET}/{PATH}"
+        mock_ti.xcom_push.assert_called_once_with(key="destination_objects", value=[expected_uri])
+        # When single file and unwrap_single=True, should return the single URI string
+        assert result == expected_uri
+    
+    @mock.patch(
+        "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
+    )
+    def test_execute_with_unwrap_single_false(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
+        mock_ti = mock.MagicMock()
+        mock_context = {"ti": mock_ti}
+        data = ["data1", "data2"]
+        mock_sheet_hook.return_value.get_sheet_titles.return_value = RANGES
+        mock_sheet_hook.return_value.get_values.side_effect = data
+        mock_upload_data.side_effect = [PATH, PATH]
+
+        op = GoogleSheetsToGCSOperator(
+            task_id="test_task",
+            spreadsheet_id=SPREADSHEET_ID,
+            destination_bucket=BUCKET,
+            sheet_filter=FILTER,
+            destination_path=PATH,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=False,
+        )
+        result = op.execute(mock_context)
+
+        expected_uris = [f"gs://{BUCKET}/{PATH}", f"gs://{BUCKET}/{PATH}"]
+        mock_ti.xcom_push.assert_called_once_with(key="destination_objects", value=expected_uris)
+        # When unwrap_single=False, should return the full list regardless of file count
+        assert result == expected_uris

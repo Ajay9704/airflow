@@ -33,7 +33,7 @@ IMPERSONATION_CHAIN = ["ACCOUNT_1", "ACCOUNT_2", "ACCOUNT_3"]
 class TestGoogleDriveToGCSOperator:
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GCSHook")
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GoogleDriveHook")
-    def test_execute(self, mock_gdrive_hook, mock_gcs_hook):
+    def test_execute_with_unwrap_single_true(self, mock_gdrive_hook, mock_gcs_hook):
         context = {}
         op = GoogleDriveToGCSOperator(
             task_id="test_task",
@@ -44,11 +44,12 @@ class TestGoogleDriveToGCSOperator:
             object_name=OBJECT,
             gcp_conn_id=GCP_CONN_ID,
             impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=True,
         )
         meta = {"id": "123xyz"}
         mock_gdrive_hook.return_value.get_file_id.return_value = meta
 
-        op.execute(context)
+        result = op.execute(context)
         mock_gdrive_hook.return_value.get_file_id.assert_called_once_with(
             folder_id=FOLDER_ID, file_name=FILE_NAME, drive_id=DRIVE_ID
         )
@@ -61,4 +62,74 @@ class TestGoogleDriveToGCSOperator:
             bucket_name=BUCKET, object_name=OBJECT
         )
 
+        # Assert single string is returned when unwrap_single=True (default)
+        assert result == f"gs://{BUCKET}/{OBJECT}"
         assert op.dry_run() is None
+    
+    @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GCSHook")
+    @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GoogleDriveHook")
+    def test_execute_with_unwrap_single_false(self, mock_gdrive_hook, mock_gcs_hook):
+        context = {}
+        op = GoogleDriveToGCSOperator(
+            task_id="test_task",
+            folder_id=FOLDER_ID,
+            file_name=FILE_NAME,
+            drive_id=DRIVE_ID,
+            bucket_name=BUCKET,
+            object_name=OBJECT,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=False,
+        )
+        meta = {"id": "123xyz"}
+        mock_gdrive_hook.return_value.get_file_id.return_value = meta
+
+        result = op.execute(context)
+        mock_gdrive_hook.return_value.get_file_id.assert_called_once_with(
+            folder_id=FOLDER_ID, file_name=FILE_NAME, drive_id=DRIVE_ID
+        )
+
+        mock_gdrive_hook.return_value.download_file.assert_called_once_with(
+            file_id=meta["id"], file_handle=mock.ANY
+        )
+
+        mock_gcs_hook.return_value.provide_file_and_upload.assert_called_once_with(
+            bucket_name=BUCKET, object_name=OBJECT
+        )
+
+        # Assert list is returned when unwrap_single=False
+        assert result == [f"gs://{BUCKET}/{OBJECT}"]
+        
+    @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GCSHook")
+    @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GoogleDriveHook")
+    def test_execute_with_unwrap_single_default(self, mock_gdrive_hook, mock_gcs_hook):
+        context = {}
+        op = GoogleDriveToGCSOperator(
+            task_id="test_task",
+            folder_id=FOLDER_ID,
+            file_name=FILE_NAME,
+            drive_id=DRIVE_ID,
+            bucket_name=BUCKET,
+            object_name=OBJECT,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            # unwrap_single not specified, should default to True with warning
+        )
+        meta = {"id": "123xyz"}
+        mock_gdrive_hook.return_value.get_file_id.return_value = meta
+
+        result = op.execute(context)
+        mock_gdrive_hook.return_value.get_file_id.assert_called_once_with(
+            folder_id=FOLDER_ID, file_name=FILE_NAME, drive_id=DRIVE_ID
+        )
+
+        mock_gdrive_hook.return_value.download_file.assert_called_once_with(
+            file_id=meta["id"], file_handle=mock.ANY
+        )
+
+        mock_gcs_hook.return_value.provide_file_and_upload.assert_called_once_with(
+            bucket_name=BUCKET, object_name=OBJECT
+        )
+
+        # Assert single string is returned when unwrap_single defaults to True
+        assert result == f"gs://{BUCKET}/{OBJECT}"
