@@ -48,7 +48,6 @@ export const NavTabs = ({ tabs }: Props) => {
     // Normalize Airflow version using semver.coerce to handle pre-release suffixes
     // coerce() converts "3.1.7rc1" to "3.1.7" for proper version comparison
     const normalizedVersion = coerce(data.version);
-    
     if (normalizedVersion) {
       // Legacy navigation for versions <= 3.1.6
       legacyRouterNavigation = lte(normalizedVersion, "3.1.6");
