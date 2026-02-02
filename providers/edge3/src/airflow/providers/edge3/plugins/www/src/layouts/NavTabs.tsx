@@ -24,7 +24,7 @@ import { useRef, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { useContainerWidth } from "src/utils";
-import { coerce, lte } from "semver";
+import { lte, coerce } from "semver";
 
 type Props = {
   readonly tabs: Array<{ icon?: ReactNode; label: string; value: string }>;
@@ -45,13 +45,13 @@ export const NavTabs = ({ tabs }: Props) => {
   let legacyRouterNavigation: boolean | undefined;
 
   if (data) {
-    // Normalize Airflow version using coerce():
-    // Extracts base version from pre-release formats like "3.1.7rc1" → "3.1.7"
-    const coercedVersion = coerce(data.version);
-    const airflowCoreVersion = coercedVersion?.version ?? null;
-
-    if (airflowCoreVersion) {
-      legacyRouterNavigation = lte(airflowCoreVersion, "3.1.6");
+    // Normalize Airflow version using semver.coerce to handle pre-release suffixes
+    // coerce() converts "3.1.7rc1" to "3.1.7" for proper version comparison
+    const normalizedVersion = coerce(data.version);
+    
+    if (normalizedVersion) {
+      // Legacy navigation for versions <= 3.1.6
+      legacyRouterNavigation = lte(normalizedVersion, "3.1.6");
     }
   }
 
@@ -59,30 +59,30 @@ export const NavTabs = ({ tabs }: Props) => {
     <Flex alignItems="center" borderBottomWidth={1} mb={2} ref={containerRef}>
       {legacyRouterNavigation !== undefined
         ? tabs.map(({ icon, label, value }) => (
-          <NavLink
-            end
-            key={value}
-            title={label}
-            to={legacyRouterNavigation ? value : `../${value}`}
-            relative={legacyRouterNavigation ? "route" : "path"}
-          >
-            {({ isActive }) => (
-              <Center
-                borderBottomColor="border.info"
-                borderBottomWidth={isActive ? 3 : 0}
-                color={isActive ? "fg" : "fg.muted"}
-                fontWeight="bold"
-                height="40px"
-                mb="-2px"
-                pb={isActive ? 0 : "3px"}
-                px={4}
-                transition="all 0.2s ease"
-              >
-                {containerWidth > 600 || !icon ? label : icon}
-              </Center>
-            )}
-          </NavLink>
-        ))
+            <NavLink
+              end
+              key={value}
+              title={label}
+              to={legacyRouterNavigation ? value : `../${value}`}
+              relative={legacyRouterNavigation ? "route" : "path"}
+            >
+              {({ isActive }) => (
+                <Center
+                  borderBottomColor="border.info"
+                  borderBottomWidth={isActive ? 3 : 0}
+                  color={isActive ? "fg" : "fg.muted"}
+                  fontWeight="bold"
+                  height="40px"
+                  mb="-2px"
+                  pb={isActive ? 0 : "3px"}
+                  px={4}
+                  transition="all 0.2s ease"
+                >
+                  {containerWidth > 600 || !icon ? label : icon}
+                </Center>
+              )}
+            </NavLink>
+          ))
         : undefined}
     </Flex>
   );
