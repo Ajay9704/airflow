@@ -65,7 +65,7 @@ class TestGoogleDriveToGCSOperator:
         # Assert single string is returned when unwrap_single=True (default)
         assert result == f"gs://{BUCKET}/{OBJECT}"
         assert op.dry_run() is None
-    
+
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GCSHook")
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GoogleDriveHook")
     def test_execute_with_unwrap_single_false(self, mock_gdrive_hook, mock_gcs_hook):
@@ -99,7 +99,7 @@ class TestGoogleDriveToGCSOperator:
 
         # Assert list is returned when unwrap_single=False
         assert result == [f"gs://{BUCKET}/{OBJECT}"]
-        
+
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GCSHook")
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GoogleDriveHook")
     def test_execute_with_unwrap_single_default(self, mock_gdrive_hook, mock_gcs_hook):

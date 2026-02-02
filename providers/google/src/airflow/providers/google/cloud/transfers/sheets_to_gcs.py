@@ -87,6 +87,7 @@ class GoogleSheetsToGCSOperator(BaseOperator):
         if unwrap_single is None:
             self.unwrap_single = True
             import warnings
+
             warnings.warn(
                 "The default value of unwrap_single will change from True to False in a future release. "
                 "Please set unwrap_single explicitly to avoid this warning.",
@@ -146,7 +147,7 @@ class GoogleSheetsToGCSOperator(BaseOperator):
             destination_array.append(gcs_uri)
 
         context["ti"].xcom_push(key="destination_objects", value=destination_array)
-        
+
         if self.unwrap_single:
             return destination_array[0] if len(destination_array) == 1 else destination_array
         return destination_array

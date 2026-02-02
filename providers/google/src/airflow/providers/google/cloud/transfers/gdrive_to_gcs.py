@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.suite.hooks.drive import GoogleDriveHook
@@ -88,6 +88,7 @@ class GoogleDriveToGCSOperator(BaseOperator):
         if unwrap_single is None:
             self.unwrap_single = True
             import warnings
+
             warnings.warn(
                 "The default value of unwrap_single will change from True to False in a future release. "
                 "Please set unwrap_single explicitly to avoid this warning.",
@@ -113,10 +114,10 @@ class GoogleDriveToGCSOperator(BaseOperator):
             bucket_name=self.bucket_name, object_name=self.object_name
         ) as file:
             gdrive_hook.download_file(file_id=file_metadata["id"], file_handle=file)
-        
+
         gcs_uri = f"gs://{self.bucket_name}/{self.object_name}"
         result = [gcs_uri]
-        
+
         if self.unwrap_single:
             return result[0]
         return result

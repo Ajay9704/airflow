@@ -81,7 +81,9 @@ class TestGoogleSheetsToGCSOperator:
     @mock.patch(
         "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
     )
-    def test_execute_with_unwrap_single_true_multiple_files(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
+    def test_execute_with_unwrap_single_true_multiple_files(
+        self, mock_upload_data, mock_sheet_hook, mock_gcs_hook
+    ):
         mock_ti = mock.MagicMock()
         mock_context = {"ti": mock_ti}
         data = ["data1", "data2"]
@@ -129,11 +131,14 @@ class TestGoogleSheetsToGCSOperator:
         mock_ti.xcom_push.assert_called_once_with(key="destination_objects", value=expected_uris)
         # When multiple files and unwrap_single=True, should return the full list
         assert result == expected_uris
-    
+
+    @mock.patch("airflow.providers.google.cloud.transfers.sheets_to_gcs.GCSHook")
+    @mock.patch("airflow.providers.google.cloud.transfers.sheets_to_gcs.GSheetsHook")
     @mock.patch(
         "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
     )
-    def test_execute_with_unwrap_single_true_single_file(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
+    def test_execute_with_unwrap_single_true_single_file(self, mock_upload_data):
+        mock_sheet_hook = mock.MagicMock()
         mock_ti = mock.MagicMock()
         mock_context = {"ti": mock_ti}
         data = ["data1"]
@@ -157,11 +162,14 @@ class TestGoogleSheetsToGCSOperator:
         mock_ti.xcom_push.assert_called_once_with(key="destination_objects", value=[expected_uri])
         # When single file and unwrap_single=True, should return the single URI string
         assert result == expected_uri
-    
+
+    @mock.patch("airflow.providers.google.cloud.transfers.sheets_to_gcs.GCSHook")
+    @mock.patch("airflow.providers.google.cloud.transfers.sheets_to_gcs.GSheetsHook")
     @mock.patch(
         "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
     )
-    def test_execute_with_unwrap_single_false(self, mock_upload_data, mock_sheet_hook, mock_gcs_hook):
+    def test_execute_with_unwrap_single_false(self, mock_upload_data):
+        mock_sheet_hook = mock.MagicMock()
         mock_ti = mock.MagicMock()
         mock_context = {"ti": mock_ti}
         data = ["data1", "data2"]
