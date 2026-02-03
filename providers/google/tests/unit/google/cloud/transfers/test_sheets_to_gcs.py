@@ -141,7 +141,7 @@ class TestGoogleSheetsToGCSOperator:
         self,
         mock_upload_data,
         mock_sheet_hook,
-        mock_gcs_hook  # <--- Added missing arguments
+        mock_gcs_hook,  # <--- Added missing arguments
     ):
         # mock_sheet_hook = mock.MagicMock()  <--- REMOVE THIS (it shadows the patched mock)
         mock_ti = mock.MagicMock()
@@ -176,7 +176,7 @@ class TestGoogleSheetsToGCSOperator:
         self,
         mock_upload_data,
         mock_sheet_hook,
-        mock_gcs_hook  # <--- Added missing arguments
+        mock_gcs_hook,  # <--- Added missing arguments
     ):
         # mock_sheet_hook = mock.MagicMock() <--- REMOVE THIS
         mock_ti = mock.MagicMock()
