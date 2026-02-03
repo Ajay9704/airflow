@@ -138,19 +138,19 @@ class TestGoogleSheetsToGCSOperator:
         "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
     )
     def test_execute_with_unwrap_single_true_single_file(
-        self, mock_upload_data, mock_sheet_hook, mock_gcs_hook  # <--- Added missing arguments
+        self,
+        mock_upload_data,
+        mock_sheet_hook,
+        mock_gcs_hook  # <--- Added missing arguments
     ):
         # mock_sheet_hook = mock.MagicMock()  <--- REMOVE THIS (it shadows the patched mock)
-        
         mock_ti = mock.MagicMock()
         mock_context = {"ti": mock_ti}
         data = ["data1"]
-        
         # Configure the injected mock directly
         mock_sheet_hook.return_value.get_sheet_titles.return_value = ["single_range"]
         mock_sheet_hook.return_value.get_values.side_effect = data
         mock_upload_data.side_effect = [PATH]
-        
         op = GoogleSheetsToGCSOperator(
             task_id="test_task",
             spreadsheet_id=SPREADSHEET_ID,
@@ -173,19 +173,19 @@ class TestGoogleSheetsToGCSOperator:
         "airflow.providers.google.cloud.transfers.sheets_to_gcs.GoogleSheetsToGCSOperator._upload_data"
     )
     def test_execute_with_unwrap_single_false(
-        self, mock_upload_data, mock_sheet_hook, mock_gcs_hook  # <--- Added missing arguments
+        self,
+        mock_upload_data,
+        mock_sheet_hook,
+        mock_gcs_hook  # <--- Added missing arguments
     ):
         # mock_sheet_hook = mock.MagicMock() <--- REMOVE THIS
-        
         mock_ti = mock.MagicMock()
         mock_context = {"ti": mock_ti}
         data = ["data1", "data2"]
-        
         # Configure the injected mock directly
         mock_sheet_hook.return_value.get_sheet_titles.return_value = RANGES
         mock_sheet_hook.return_value.get_values.side_effect = data
         mock_upload_data.side_effect = [PATH, PATH]
-        
         op = GoogleSheetsToGCSOperator(
             task_id="test_task",
             spreadsheet_id=SPREADSHEET_ID,
