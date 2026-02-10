@@ -145,4 +145,3 @@ class TestGoogleDisplayVideo360CreateSDFDownloadTaskOperator:
             body_request=body_request
         )
         mock_context["task_instance"].xcom_push.assert_called_once_with(key="name", value=test_name)
-        
