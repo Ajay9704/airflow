@@ -16,15 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 import { Center, Flex } from "@chakra-ui/react";
-import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { useRef, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
+import { coerce, lte } from "semver";
 
 import { useContainerWidth } from "src/utils";
-import { lte, coerce } from "semver";
 
 type Props = {
   readonly tabs: Array<{ icon?: ReactNode; label: string; value: string }>;
@@ -47,10 +46,12 @@ export const NavTabs = ({ tabs }: Props) => {
   if (data) {
     // Normalize Airflow version using semver.coerce to handle pre-release suffixes
     // coerce() converts "3.1.7rc1" to "3.1.7" for proper version comparison
-    const normalizedVersion = coerce(data.version);
-    if (normalizedVersion) {
+    const coercedVersion = coerce(data.version);
+    const airflowCoreVersion = coercedVersion?.version ?? null;
+
+    if (airflowCoreVersion) {
       // Legacy navigation for versions <= 3.1.6
-      legacyRouterNavigation = lte(normalizedVersion, "3.1.6");
+      legacyRouterNavigation = lte(airflowCoreVersion, "3.1.6");
     }
   }
 

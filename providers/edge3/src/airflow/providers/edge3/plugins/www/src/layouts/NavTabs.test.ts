@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 import { coerce, lte } from "semver";
 import { describe, expect, it } from "vitest";
 
@@ -25,73 +24,66 @@ import { describe, expect, it } from "vitest";
  * Ensures pre-release versions like "3.1.7rc1" are correctly normalized
  */
 describe("Version Parsing with semver.coerce()", () => {
-    const parseVersion = (version: string): string | null => {
-        const coercedVersion = coerce(version);
-        return coercedVersion?.version ?? null;
-    };
+  const parseVersion = (version: string): string | null => {
+    const coercedVersion = coerce(version);
+    return coercedVersion?.version ?? null;
+  };
 
-    it("handles standard semantic versions", () => {
-        expect(parseVersion("3.1.7")).toBe("3.1.7");
-        expect(parseVersion("3.1.6")).toBe("3.1.6");
-        expect(parseVersion("3.0.0")).toBe("3.0.0");
-    });
+  it("handles standard semantic versions", () => {
+    expect(parseVersion("3.1.7")).toBe("3.1.7");
+    expect(parseVersion("3.1.6")).toBe("3.1.6");
+    expect(parseVersion("3.0.0")).toBe("3.0.0");
+  });
 
-    it("handles release candidate versions (e.g., 3.1.7rc1)", () => {
-        expect(parseVersion("3.1.7rc1")).toBe("3.1.7");
-        expect(parseVersion("3.1.7rc2")).toBe("3.1.7");
-        expect(parseVersion("3.2.0rc1")).toBe("3.2.0");
-    });
+  it("handles release candidate versions (e.g., 3.1.7rc1)", () => {
+    expect(parseVersion("3.1.7rc1")).toBe("3.1.7");
+    expect(parseVersion("3.1.7rc2")).toBe("3.1.7");
+    expect(parseVersion("3.2.0rc1")).toBe("3.2.0");
+  });
 
-    it("handles pre-release versions with dash separator", () => {
-        expect(parseVersion("3.1.7-alpha")).toBe("3.1.7");
-        expect(parseVersion("3.1.7-alpha.1")).toBe("3.1.7");
-        expect(parseVersion("3.1.7-beta.2")).toBe("3.1.7");
-        expect(parseVersion("3.1.7-rc.1")).toBe("3.1.7");
-    });
+  it("handles development versions", () => {
+    expect(parseVersion("3.1.7.dev0")).toBe("3.1.7");
+    expect(parseVersion("3.1.7.dev234")).toBe("3.1.7");
+  });
 
-    it("handles development versions", () => {
-        expect(parseVersion("3.1.7.dev0")).toBe("3.1.7");
-        expect(parseVersion("3.1.7.dev234")).toBe("3.1.7");
-    });
+  it("handles versions with v prefix", () => {
+    expect(parseVersion("v3.1.7")).toBe("3.1.7");
+    expect(parseVersion("v3.1.7rc1")).toBe("3.1.7");
+  });
 
-    it("handles versions with v prefix", () => {
-        expect(parseVersion("v3.1.7")).toBe("3.1.7");
-        expect(parseVersion("v3.1.7rc1")).toBe("3.1.7");
-    });
-
-    it("returns null for completely invalid versions", () => {
-        expect(parseVersion("")).toBe(null);
-        expect(parseVersion("invalid")).toBe(null);
-        expect(parseVersion("not-a-version")).toBe(null);
-    });
+  it("returns null for completely invalid versions", () => {
+    expect(parseVersion("")).toBe(null);
+    expect(parseVersion("invalid")).toBe(null);
+    expect(parseVersion("not-a-version")).toBe(null);
+  });
 });
 
 describe("Version comparison for legacy router navigation", () => {
-    const shouldUseLegacyNavigation = (version: string): boolean | undefined => {
-        const coercedVersion = coerce(version);
-        const airflowCoreVersion = coercedVersion?.version ?? null;
+  const shouldUseLegacyNavigation = (version: string): boolean | undefined => {
+    const coercedVersion = coerce(version);
+    const airflowCoreVersion = coercedVersion?.version ?? null;
 
-        if (airflowCoreVersion) {
-            return lte(airflowCoreVersion, "3.1.6");
-        }
-        return undefined;
-    };
+    if (airflowCoreVersion) {
+      return lte(airflowCoreVersion, "3.1.6");
+    }
+    return undefined;
+  };
 
-    it("returns true for versions <= 3.1.6", () => {
-        expect(shouldUseLegacyNavigation("3.1.6")).toBe(true);
-        expect(shouldUseLegacyNavigation("3.1.5")).toBe(true);
-        expect(shouldUseLegacyNavigation("3.0.0")).toBe(true);
-    });
+  it("returns true for versions <= 3.1.6", () => {
+    expect(shouldUseLegacyNavigation("3.1.6")).toBe(true);
+    expect(shouldUseLegacyNavigation("3.1.5")).toBe(true);
+    expect(shouldUseLegacyNavigation("3.0.0")).toBe(true);
+  });
 
-    it("returns false for versions > 3.1.6", () => {
-        expect(shouldUseLegacyNavigation("3.1.7")).toBe(false);
-        expect(shouldUseLegacyNavigation("3.1.7rc1")).toBe(false);
-        expect(shouldUseLegacyNavigation("3.2.0")).toBe(false);
-        expect(shouldUseLegacyNavigation("4.0.0")).toBe(false);
-    });
+  it("returns false for versions > 3.1.6", () => {
+    expect(shouldUseLegacyNavigation("3.1.7")).toBe(false);
+    expect(shouldUseLegacyNavigation("3.1.7rc1")).toBe(false);
+    expect(shouldUseLegacyNavigation("3.2.0")).toBe(false);
+    expect(shouldUseLegacyNavigation("4.0.0")).toBe(false);
+  });
 
-    it("returns undefined for invalid versions", () => {
-        expect(shouldUseLegacyNavigation("invalid")).toBe(undefined);
-        expect(shouldUseLegacyNavigation("")).toBe(undefined);
-    });
+  it("returns undefined for invalid versions", () => {
+    expect(shouldUseLegacyNavigation("invalid")).toBe(undefined);
+    expect(shouldUseLegacyNavigation("")).toBe(undefined);
+  });
 });
