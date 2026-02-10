@@ -79,7 +79,8 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         If False, always returns a list of URIs. Default will change to False in a future release.
     :param return_gcs_uri: If True, returns the full GCS URI (e.g., ``gs://bucket/path/to/file``).
         If False (default), returns the destination file name only (e.g., ``bucket/path/to/file``).
-        This parameter cannot be used together with ``unwrap_single=True``.
+        This parameter is deprecated and will be removed in a future release.
+        When this parameter's value is False, it cannot be used altogether with ``unwrap_single=False``.
     """
 
     template_fields = [
@@ -114,7 +115,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
         unwrap_single: bool | None = None,
-        return_gcs_uri: bool = False,
+        return_gcs_uri: bool | None = False,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -139,10 +140,11 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         self.destination_bucket = destination_bucket
         self.destination_path = destination_path
         self.impersonation_chain = impersonation_chain
+
+        import warnings
+
         if unwrap_single is None:
             self.unwrap_single = True
-            import warnings
-
             warnings.warn(
                 "The default value of unwrap_single will change from True to False in a future release. "
                 "Please set unwrap_single explicitly to avoid this warning.",
@@ -152,13 +154,26 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         else:
             self.unwrap_single = unwrap_single
 
-        self.return_gcs_uri = return_gcs_uri
+        if return_gcs_uri is None:
+            self.return_gcs_uri = False
+            warnings.warn(
+                "The return_gcs_uri parameter is deprecated and will be removed in a future release. "
+                "In the future, operators will always return full GCS URIs.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        else:
+            self.return_gcs_uri = return_gcs_uri
 
-        if self.unwrap_single and self.return_gcs_uri:
+        # Validate that the combination is valid: we cannot have both unwrap_single=False
+        # and return_gcs_uri=False as this combination is backward-incompatible with the
+        # future behavior of always returning lists of URIs.
+        # Note: After None handling above, both values are guaranteed to be bool (not None).
+        if not self.unwrap_single and not self.return_gcs_uri:
             raise ValueError(
-                "return_gcs_uri cannot be True together with unwrap_single=True. "
+                "return_gcs_uri cannot be False together with unwrap_single=False. "
                 "In the future, all operators will return list of URIs, so please set "
-                "unwrap_single=False when using return_gcs_uri=True."
+                "return_gcs_uri=True when using unwrap_single=False.",
             )
 
     def _upload_data(

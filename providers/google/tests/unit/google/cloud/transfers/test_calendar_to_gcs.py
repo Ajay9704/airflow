@@ -17,7 +17,10 @@
 
 from __future__ import annotations
 
+import warnings
 from unittest import mock
+
+import pytest
 
 from airflow.providers.google.cloud.transfers.calendar_to_gcs import GoogleCalendarToGCSOperator
 
@@ -131,7 +134,8 @@ class TestGoogleCalendarToGCSOperator:
         context = {}
         data = [EVENT]
         expected_dest_file_name = f"{PATH.strip('/')}/{CALENDAR_ID}.json"
-        mock_upload_data.return_value = (expected_dest_file_name, f"gs://{BUCKET}/{PATH}")
+        expected_gcs_uri = f"gs://{BUCKET}/{expected_dest_file_name}"
+        mock_upload_data.return_value = (expected_dest_file_name, expected_gcs_uri)
         mock_calendar_hook.return_value.get_events.return_value = data
 
         op = GoogleCalendarToGCSOperator(
@@ -143,6 +147,7 @@ class TestGoogleCalendarToGCSOperator:
             gcp_conn_id=GCP_CONN_ID,
             impersonation_chain=IMPERSONATION_CHAIN,
             unwrap_single=False,
+            return_gcs_uri=True,
         )
         result = op.execute(context)
 
@@ -172,14 +177,16 @@ class TestGoogleCalendarToGCSOperator:
         )
 
         mock_upload_data.assert_called_once_with(data)
-        # Assert list of dest_file_names is returned when unwrap_single=False and return_gcs_uri=False
-        assert result == [expected_dest_file_name]
+        # Assert list of GCS URIs is returned when unwrap_single=False and return_gcs_uri=True
+        assert result == [expected_gcs_uri]
 
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarHook")
     @mock.patch(
         "airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarToGCSOperator._upload_data"
     )
-    def test_execute_with_return_gcs_uri_true_and_unwrap_single_false(self, mock_upload_data, mock_calendar_hook):
+    def test_execute_with_return_gcs_uri_true_and_unwrap_single_false(
+        self, mock_upload_data, mock_calendar_hook
+    ):
         context = {}
         data = [EVENT]
         expected_dest_file_name = f"{PATH.strip('/')}/{CALENDAR_ID}.json"
@@ -229,11 +236,11 @@ class TestGoogleCalendarToGCSOperator:
         # Assert list of GCS URIs is returned when return_gcs_uri=True
         assert result == [expected_gcs_uri]
 
-    def test_execute_with_return_gcs_uri_true_and_unwrap_single_true_raises_error(self):
-        """Test that return_gcs_uri=True together with unwrap_single=True raises ValueError."""
-        import pytest
-
-        with pytest.raises(ValueError, match="return_gcs_uri cannot be True together with unwrap_single=True"):
+    def test_execute_with_return_gcs_uri_false_and_unwrap_single_false_raises_error(self):
+        """Test that return_gcs_uri=False together with unwrap_single=False raises ValueError."""
+        with pytest.raises(
+            ValueError, match="return_gcs_uri cannot be False together with unwrap_single=False"
+        ):
             GoogleCalendarToGCSOperator(
                 api_version=API_VERSION,
                 task_id="test_task",
@@ -242,6 +249,82 @@ class TestGoogleCalendarToGCSOperator:
                 destination_path=PATH,
                 gcp_conn_id=GCP_CONN_ID,
                 impersonation_chain=IMPERSONATION_CHAIN,
-                unwrap_single=True,
+                unwrap_single=False,
+                return_gcs_uri=False,
+            )
+
+    def test_unwrap_single_none_emits_warning(self):
+        """Test that unwrap_single=None emits a deprecation warning."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            GoogleCalendarToGCSOperator(
+                api_version=API_VERSION,
+                task_id="test_task",
+                calendar_id=CALENDAR_ID,
+                destination_bucket=BUCKET,
+                destination_path=PATH,
+                gcp_conn_id=GCP_CONN_ID,
+                impersonation_chain=IMPERSONATION_CHAIN,
+                unwrap_single=None,
                 return_gcs_uri=True,
             )
+            assert len(w) == 1
+            assert issubclass(w[0].category, FutureWarning)
+            assert "unwrap_single will change from True to False" in str(w[0].message)
+
+    def test_return_gcs_uri_none_emits_warning(self):
+        """Test that return_gcs_uri=None emits a deprecation warning."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            GoogleCalendarToGCSOperator(
+                api_version=API_VERSION,
+                task_id="test_task",
+                calendar_id=CALENDAR_ID,
+                destination_bucket=BUCKET,
+                destination_path=PATH,
+                gcp_conn_id=GCP_CONN_ID,
+                impersonation_chain=IMPERSONATION_CHAIN,
+                unwrap_single=False,
+                return_gcs_uri=None,
+            )
+            assert len(w) == 1
+            assert issubclass(w[0].category, FutureWarning)
+            assert "return_gcs_uri parameter is deprecated" in str(w[0].message)
+
+    def test_both_none_emits_both_warnings(self):
+        """Test that both None values emit both deprecation warnings."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            # Create operator but don't need to use it - just checking for warnings
+            GoogleCalendarToGCSOperator(
+                api_version=API_VERSION,
+                task_id="test_task",
+                calendar_id=CALENDAR_ID,
+                destination_bucket=BUCKET,
+                destination_path=PATH,
+                gcp_conn_id=GCP_CONN_ID,
+                impersonation_chain=IMPERSONATION_CHAIN,
+                unwrap_single=None,
+                return_gcs_uri=None,
+            )
+            # Should have 2 warnings and not raise ValueError since return_gcs_uri gets set to False
+            # when None, and unwrap_single gets set to True when None
+            assert len(w) == 2
+            assert all(issubclass(warning.category, FutureWarning) for warning in w)
+
+    def test_return_gcs_uri_true_with_unwrap_single_true_is_valid(self):
+        """Test that return_gcs_uri=True with unwrap_single=True is valid (opposite of old logic)."""
+        # This should NOT raise an error (the old test was checking the wrong condition)
+        op = GoogleCalendarToGCSOperator(
+            api_version=API_VERSION,
+            task_id="test_task",
+            calendar_id=CALENDAR_ID,
+            destination_bucket=BUCKET,
+            destination_path=PATH,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=True,
+            return_gcs_uri=True,
+        )
+        assert op.unwrap_single is True
+        assert op.return_gcs_uri is True
