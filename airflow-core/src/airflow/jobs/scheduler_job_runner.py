@@ -36,7 +36,6 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     and_,
     delete,
-    desc,
     exists,
     func,
     inspect,
@@ -2578,7 +2577,7 @@ class SchedulerJobRunner(BaseJobRunner, LoggingMixin):
                 Log.try_number == ti.try_number,
                 Log.event == "running",
             )
-            .order_by(desc(Log.dttm))
+            .order_by(Log.dttm.desc())
             .limit(1)
         )
 
@@ -2652,7 +2651,7 @@ class SchedulerJobRunner(BaseJobRunner, LoggingMixin):
     @provide_session
     def _emit_running_dags_metric(self, session: Session = NEW_SESSION) -> None:
         stmt = select(func.count()).select_from(DagRun).where(DagRun.state == DagRunState.RUNNING)
-        running_dags = float(session.scalar(stmt))
+        running_dags = float(session.scalar(stmt) or 0)
         Stats.gauge("scheduler.dagruns.running", running_dags)
 
     @provide_session
@@ -2882,6 +2881,12 @@ class SchedulerJobRunner(BaseJobRunner, LoggingMixin):
     def _purge_task_instances_without_heartbeats(
         self, task_instances_without_heartbeats: list[TI], *, session: Session
     ) -> None:
+        if conf.getboolean("core", "multi_team"):
+            unique_dag_ids = {ti.dag_id for ti in task_instances_without_heartbeats}
+            dag_id_to_team_name = self._get_team_names_for_dag_ids(unique_dag_ids, session)
+        else:
+            dag_id_to_team_name = {}
+
         for ti in task_instances_without_heartbeats:
             task_instance_heartbeat_timeout_message_details = (
                 self._generate_task_instance_heartbeat_timeout_message_details(ti)
@@ -2926,7 +2931,10 @@ class SchedulerJobRunner(BaseJobRunner, LoggingMixin):
                 request,
             )
             self.job.executor.send_callback(request)
-            if (executor := self._try_to_load_executor(ti, session)) is None:
+            executor = self._try_to_load_executor(
+                ti, session, team_name=dag_id_to_team_name.get(ti.dag_id, NOTSET)
+            )
+            if executor is None:
                 self.log.warning(
                     "Cannot clean up task instance without heartbeat %r with non-existent executor %s",
                     ti,
@@ -3100,12 +3108,37 @@ class SchedulerJobRunner(BaseJobRunner, LoggingMixin):
             existing_warned_dag_ids.add(warning.dag_id)
 
     def _executor_to_tis(
-        self, tis: Iterable[TaskInstance], session
+        self,
+        tis: Iterable[TaskInstance],
+        session,
+        dag_id_to_team_name: dict[str, str | None] | None = None,
     ) -> dict[BaseExecutor, list[TaskInstance]]:
         """Organize TIs into lists per their respective executor."""
+        tis_iter: Iterable[TaskInstance]
+        if conf.getboolean("core", "multi_team"):
+            if dag_id_to_team_name is None:
+                if isinstance(tis, list):
+                    tis_list = tis
+                else:
+                    tis_list = list(tis)
+                if tis_list:
+                    dag_id_to_team_name = self._get_team_names_for_dag_ids(
+                        {ti.dag_id for ti in tis_list}, session
+                    )
+                else:
+                    dag_id_to_team_name = {}
+                tis_iter = tis_list
+            else:
+                tis_iter = tis
+        else:
+            dag_id_to_team_name = {}
+            tis_iter = tis
+
         _executor_to_tis: defaultdict[BaseExecutor, list[TaskInstance]] = defaultdict(list)
-        for ti in tis:
-            if executor_obj := self._try_to_load_executor(ti, session):
+        for ti in tis_iter:
+            if executor_obj := self._try_to_load_executor(
+                ti, session, team_name=dag_id_to_team_name.get(ti.dag_id, NOTSET)
+            ):
                 _executor_to_tis[executor_obj].append(ti)
 
         return _executor_to_tis

@@ -110,6 +110,7 @@ ast
 astroid
 Async
 async
+asyncio
 AsyncResult
 athena
 Atlassian
@@ -1191,6 +1192,7 @@ muldelete
 multi-cloud
 multimodal
 Multinamespace
+multiprocess
 mutex
 mv
 mwaa

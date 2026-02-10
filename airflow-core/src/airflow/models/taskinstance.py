@@ -60,7 +60,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import Mapped, lazyload, reconstructor, relationship
+from sqlalchemy.orm import Mapped, lazyload, mapped_column, reconstructor, relationship
 from sqlalchemy.orm.attributes import NO_VALUE, set_committed_value
 from sqlalchemy_utils import UUIDType
 
@@ -74,6 +74,8 @@ from airflow.listeners.listener import get_listener_manager
 from airflow.models.asset import AssetModel
 from airflow.models.base import Base, StringID, TaskInstanceDependencies
 from airflow.models.dag_version import DagVersion
+from airflow.models.deadline import Deadline, ReferenceModels
+from airflow.models.deadline_alert import DeadlineAlert as DeadlineAlertModel
 
 # Import HITLDetail at runtime so SQLAlchemy can resolve the relationship
 from airflow.models.hitl import HITLDetail  # noqa: F401
@@ -93,7 +95,7 @@ from airflow.utils.platform import getuser
 from airflow.utils.retries import run_with_db_retries
 from airflow.utils.session import NEW_SESSION, create_session, provide_session
 from airflow.utils.span_status import SpanStatus
-from airflow.utils.sqlalchemy import ExecutorConfigType, ExtendedJSON, UtcDateTime, mapped_column
+from airflow.utils.sqlalchemy import ExecutorConfigType, ExtendedJSON, UtcDateTime
 from airflow.utils.state import DagRunState, State, TaskInstanceState
 
 TR = TaskReschedule
@@ -179,6 +181,50 @@ def _stop_remaining_tasks(*, task_instance: TaskInstance, task_teardown_map=None
                 ti.set_state(state=TaskInstanceState.SKIPPED, session=session)
         else:
             log.info("Not skipping teardown task '%s'", ti.task_id)
+
+
+def _recalculate_dagrun_queued_at_deadlines(
+    dagrun: DagRun, new_queued_at: datetime, session: Session
+) -> None:
+    """
+    Recalculate deadline times for deadlines that reference dagrun.queued_at.
+
+    :param dagrun: The DagRun whose deadlines should be recalculated
+    :param new_queued_at: The new queued_at timestamp to use for calculation
+    :param session: Database session
+
+    :meta private:
+    """
+    results = session.execute(
+        select(Deadline, DeadlineAlertModel)
+        .join(DeadlineAlertModel, Deadline.deadline_alert_id == DeadlineAlertModel.id)
+        .where(
+            Deadline.dagrun_id == dagrun.id,
+            Deadline.missed == false(),
+            DeadlineAlertModel.reference[ReferenceModels.REFERENCE_TYPE_FIELD].as_string()
+            == ReferenceModels.DagRunQueuedAtDeadline.__name__,
+        )
+    ).all()
+
+    if not results:
+        return
+
+    for deadline, deadline_alert in results:
+        # We can't use evaluate_with() since the new queued_at is not written to the DB yet.
+        deadline_interval = timedelta(seconds=deadline_alert.interval)
+        new_deadline_time = new_queued_at + deadline_interval
+
+        log.debug(
+            "Recalculating deadline %s for DagRun %s.%s: old=%s, new=%s",
+            deadline.id,
+            dagrun.dag_id,
+            dagrun.run_id,
+            deadline.deadline_time,
+            new_deadline_time,
+        )
+        deadline.deadline_time = new_deadline_time
+    # Do not flush/commit here in order to keep the scheduler loop atomic.
+    # These changes are committed by the calling function.
 
 
 def clear_task_instances(
@@ -273,6 +319,8 @@ def clear_task_instances(
             # Always update clear_number and queued_at when clearing tasks, regardless of state
             dr.clear_number += 1
             dr.queued_at = timezone.utcnow()
+
+            _recalculate_dagrun_queued_at_deadlines(dr, dr.queued_at, session)
 
             if dr.state in State.finished_dr_states:
                 dr.state = dag_run_state
@@ -422,7 +470,7 @@ class TaskInstance(Base, LoggingMixin):
         String(250), server_default=SpanStatus.NOT_STARTED, nullable=False
     )
 
-    external_executor_id: Mapped[str | None] = mapped_column(StringID(), nullable=True)
+    external_executor_id: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
     # The trigger to resume on if we are in state DEFERRED
     trigger_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -599,6 +647,10 @@ class TaskInstance(Base, LoggingMixin):
     @hybrid_property
     def task_display_name(self) -> str:
         return self._task_display_property_value or self.task_id
+
+    @task_display_name.expression  # type: ignore[no-redef]
+    def task_display_name(cls):
+        return func.coalesce(cls._task_display_property_value, cls.task_id)
 
     @hybrid_property
     def rendered_map_index(self) -> str | None:
