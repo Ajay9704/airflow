@@ -77,6 +77,9 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         account from the list granting this role to the originating account (templated).
     :param unwrap_single: If True (default), returns a single URI string when there's only one file.
         If False, always returns a list of URIs. Default will change to False in a future release.
+    :param return_gcs_uri: If True, returns the full GCS URI (e.g., ``gs://bucket/path/to/file``).
+        If False (default), returns the destination file name only (e.g., ``bucket/path/to/file``).
+        This parameter cannot be used together with ``unwrap_single=True``.
     """
 
     template_fields = [
@@ -111,6 +114,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
         unwrap_single: bool | None = None,
+        return_gcs_uri: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -148,10 +152,19 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         else:
             self.unwrap_single = unwrap_single
 
+        self.return_gcs_uri = return_gcs_uri
+
+        if self.unwrap_single and self.return_gcs_uri:
+            raise ValueError(
+                "return_gcs_uri cannot be True together with unwrap_single=True. "
+                "In the future, all operators will return list of URIs, so please set "
+                "unwrap_single=False when using return_gcs_uri=True."
+            )
+
     def _upload_data(
         self,
         events: list[Any],
-    ) -> str:
+    ) -> tuple[str, str]:
         gcs_hook = GCSHook(
             gcp_conn_id=self.gcp_conn_id,
             impersonation_chain=self.impersonation_chain,
@@ -174,7 +187,8 @@ class GoogleCalendarToGCSOperator(BaseOperator):
                 object_name=dest_file_name,
                 filename=temp_file.name,
             )
-        return f"gs://{self.destination_bucket}/{dest_file_name}"
+        gcs_uri = f"gs://{self.destination_bucket}/{dest_file_name}"
+        return dest_file_name, gcs_uri
 
     def execute(self, context) -> str | list[str]:
         calendar_hook = GoogleCalendarHook(
@@ -201,8 +215,15 @@ class GoogleCalendarToGCSOperator(BaseOperator):
             time_zone=self.time_zone,
             updated_min=self.updated_min,
         )
-        gcs_uri = self._upload_data(events)
-        result = [gcs_uri]
+        dest_file_name, gcs_uri = self._upload_data(events)
+
+        # Determine what to return based on flags
+        if self.return_gcs_uri:
+            result = [gcs_uri]
+        else:
+            # For backward compatibility, return dest_file_name when unwrap_single=False
+            # and return_gcs_uri=False (default behavior)
+            result = [dest_file_name]
 
         if self.unwrap_single:
             return result[0]

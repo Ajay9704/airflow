@@ -38,6 +38,7 @@ class TestGoogleCalendarToGCSOperator:
     def test_upload_data(self, mock_calendar_hook, mock_gcs_hook, mock_json, mock_temp_file):
         expected_dest_file = f"{CALENDAR_ID}.json".replace(" ", "_")
         expected_dest_file = f"{PATH.strip('/')}/{expected_dest_file}"
+        expected_gcs_uri = f"gs://{BUCKET}/{expected_dest_file}"
 
         mock_calendar_hook.return_value.get_events.return_value = [EVENT]
         mock_gcs_hook.return_value.upload.return_value = None
@@ -67,8 +68,8 @@ class TestGoogleCalendarToGCSOperator:
             impersonation_chain=IMPERSONATION_CHAIN,
         )
 
-        # Assert path to file is returned
-        assert result == f"gs://{BUCKET}/{expected_dest_file}"
+        # Assert tuple of (dest_file_name, gcs_uri) is returned
+        assert result == (expected_dest_file, expected_gcs_uri)
 
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarHook")
     @mock.patch(
@@ -77,7 +78,8 @@ class TestGoogleCalendarToGCSOperator:
     def test_execute_with_unwrap_single_true(self, mock_upload_data, mock_calendar_hook):
         context = {}
         data = [EVENT]
-        mock_upload_data.return_value = f"gs://{BUCKET}/{PATH}"
+        expected_dest_file_name = f"{PATH.strip('/')}/{CALENDAR_ID}.json"
+        mock_upload_data.return_value = (expected_dest_file_name, f"gs://{BUCKET}/{PATH}")
         mock_calendar_hook.return_value.get_events.return_value = data
 
         op = GoogleCalendarToGCSOperator(
@@ -118,8 +120,8 @@ class TestGoogleCalendarToGCSOperator:
         )
 
         mock_upload_data.assert_called_once_with(data)
-        # Assert single string is returned when unwrap_single=True (default)
-        assert result == f"gs://{BUCKET}/{PATH}"
+        # Assert dest_file_name is returned when unwrap_single=True and return_gcs_uri=False (default)
+        assert result == expected_dest_file_name
 
     @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarHook")
     @mock.patch(
@@ -128,7 +130,8 @@ class TestGoogleCalendarToGCSOperator:
     def test_execute_with_unwrap_single_false(self, mock_upload_data, mock_calendar_hook):
         context = {}
         data = [EVENT]
-        mock_upload_data.return_value = f"gs://{BUCKET}/{PATH}"
+        expected_dest_file_name = f"{PATH.strip('/')}/{CALENDAR_ID}.json"
+        mock_upload_data.return_value = (expected_dest_file_name, f"gs://{BUCKET}/{PATH}")
         mock_calendar_hook.return_value.get_events.return_value = data
 
         op = GoogleCalendarToGCSOperator(
@@ -169,5 +172,76 @@ class TestGoogleCalendarToGCSOperator:
         )
 
         mock_upload_data.assert_called_once_with(data)
-        # Assert list is returned when unwrap_single=False
-        assert result == [f"gs://{BUCKET}/{PATH}"]
+        # Assert list of dest_file_names is returned when unwrap_single=False and return_gcs_uri=False
+        assert result == [expected_dest_file_name]
+
+    @mock.patch("airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarHook")
+    @mock.patch(
+        "airflow.providers.google.cloud.transfers.calendar_to_gcs.GoogleCalendarToGCSOperator._upload_data"
+    )
+    def test_execute_with_return_gcs_uri_true_and_unwrap_single_false(self, mock_upload_data, mock_calendar_hook):
+        context = {}
+        data = [EVENT]
+        expected_dest_file_name = f"{PATH.strip('/')}/{CALENDAR_ID}.json"
+        expected_gcs_uri = f"gs://{BUCKET}/{expected_dest_file_name}"
+        mock_upload_data.return_value = (expected_dest_file_name, expected_gcs_uri)
+        mock_calendar_hook.return_value.get_events.return_value = data
+
+        op = GoogleCalendarToGCSOperator(
+            api_version=API_VERSION,
+            task_id="test_task",
+            calendar_id=CALENDAR_ID,
+            destination_bucket=BUCKET,
+            destination_path=PATH,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            unwrap_single=False,
+            return_gcs_uri=True,
+        )
+        result = op.execute(context)
+
+        mock_calendar_hook.assert_called_once_with(
+            api_version=API_VERSION,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+        )
+
+        mock_calendar_hook.return_value.get_events.assert_called_once_with(
+            calendar_id=CALENDAR_ID,
+            i_cal_uid=None,
+            max_attendees=None,
+            max_results=None,
+            order_by=None,
+            private_extended_property=None,
+            q=None,
+            shared_extended_property=None,
+            show_deleted=None,
+            show_hidden_invitation=None,
+            single_events=None,
+            sync_token=None,
+            time_max=None,
+            time_min=None,
+            time_zone=None,
+            updated_min=None,
+        )
+
+        mock_upload_data.assert_called_once_with(data)
+        # Assert list of GCS URIs is returned when return_gcs_uri=True
+        assert result == [expected_gcs_uri]
+
+    def test_execute_with_return_gcs_uri_true_and_unwrap_single_true_raises_error(self):
+        """Test that return_gcs_uri=True together with unwrap_single=True raises ValueError."""
+        import pytest
+
+        with pytest.raises(ValueError, match="return_gcs_uri cannot be True together with unwrap_single=True"):
+            GoogleCalendarToGCSOperator(
+                api_version=API_VERSION,
+                task_id="test_task",
+                calendar_id=CALENDAR_ID,
+                destination_bucket=BUCKET,
+                destination_path=PATH,
+                gcp_conn_id=GCP_CONN_ID,
+                impersonation_chain=IMPERSONATION_CHAIN,
+                unwrap_single=True,
+                return_gcs_uri=True,
+            )
