@@ -195,4 +195,3 @@ class GoogleDisplayVideo360SDFtoGCSOperator(BaseOperator):
                         gzip=False,
                     )
         return f"{self.bucket_name}/{self.object_name}"
-        
