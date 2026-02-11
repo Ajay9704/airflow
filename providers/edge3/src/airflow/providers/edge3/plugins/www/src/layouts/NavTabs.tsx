@@ -17,13 +17,12 @@
  * under the License.
  */
 import { Center, Flex } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import { useRef, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { coerce, lte } from "semver";
 
-import { useContainerWidth } from "src/utils";
+import { getLegacyRouterNavigation, useContainerWidth } from "src/utils";
 
 type Props = {
   readonly tabs: Array<{ icon?: ReactNode; label: string; value: string }>;
@@ -33,7 +32,7 @@ export const NavTabs = ({ tabs }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerWidth = useContainerWidth(containerRef);
 
-  const { data } = useQuery<{ version: string; git_version: string | null }>({
+  const { data } = useQuery<{version: string, git_version: string | null}>({
     queryFn: async () => {
       const res = await axios.get("/api/v2/version");
       return res.data;
@@ -41,49 +40,33 @@ export const NavTabs = ({ tabs }: Props) => {
     queryKey: ["appVersion"],
   });
 
-  let legacyRouterNavigation: boolean | undefined;
+  let legacyRouterNavigation: boolean | undefined = undefined;
 
   if (data) {
-    // Normalize Airflow version using semver.coerce to handle pre-release suffixes
-    // coerce() converts "3.1.7rc1" to "3.1.7" for proper version comparison
-    const coercedVersion = coerce(data.version);
-    const airflowCoreVersion = coercedVersion?.version ?? null;
-
-    if (airflowCoreVersion) {
-      // Legacy navigation for versions <= 3.1.6
-      legacyRouterNavigation = lte(airflowCoreVersion, "3.1.6");
-    }
+    legacyRouterNavigation = getLegacyRouterNavigation(data.version);
   }
 
   return (
     <Flex alignItems="center" borderBottomWidth={1} mb={2} ref={containerRef}>
-      {legacyRouterNavigation !== undefined
-        ? tabs.map(({ icon, label, value }) => (
-            <NavLink
-              end
-              key={value}
-              title={label}
-              to={legacyRouterNavigation ? value : `../${value}`}
-              relative={legacyRouterNavigation ? "route" : "path"}
+      {legacyRouterNavigation !== undefined ? tabs.map(({ icon, label, value }) => (
+        <NavLink end key={value} title={label} to={legacyRouterNavigation ? value : `../${value}`} relative={legacyRouterNavigation ? "route" : "path"}>
+          {({ isActive }) => (
+            <Center
+              borderBottomColor="border.info"
+              borderBottomWidth={isActive ? 3 : 0}
+              color={isActive ? "fg" : "fg.muted"}
+              fontWeight="bold"
+              height="40px"
+              mb="-2px" // Show the border on top of its parent's border
+              pb={isActive ? 0 : "3px"}
+              px={4}
+              transition="all 0.2s ease"
             >
-              {({ isActive }) => (
-                <Center
-                  borderBottomColor="border.info"
-                  borderBottomWidth={isActive ? 3 : 0}
-                  color={isActive ? "fg" : "fg.muted"}
-                  fontWeight="bold"
-                  height="40px"
-                  mb="-2px"
-                  pb={isActive ? 0 : "3px"}
-                  px={4}
-                  transition="all 0.2s ease"
-                >
-                  {containerWidth > 600 || !icon ? label : icon}
-                </Center>
-              )}
-            </NavLink>
-          ))
-        : undefined}
+              {containerWidth > 600 || !icon ? label : icon}
+            </Center>
+          )}
+        </NavLink>
+      )): undefined}
     </Flex>
   );
 };
