@@ -115,7 +115,7 @@ class GoogleCalendarToGCSOperator(BaseOperator):
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
         unwrap_single: bool | None = None,
-        return_gcs_uri: bool | None = False,
+        return_gcs_uri: bool | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
