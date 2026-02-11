@@ -284,7 +284,7 @@ class TestGoogleCalendarToGCSOperator:
                 destination_path=PATH,
                 gcp_conn_id=GCP_CONN_ID,
                 impersonation_chain=IMPERSONATION_CHAIN,
-                unwrap_single=False,
+                unwrap_single=True,
                 return_gcs_uri=None,
             )
             assert len(w) == 1
