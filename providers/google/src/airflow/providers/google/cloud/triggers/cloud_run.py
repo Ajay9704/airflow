@@ -128,12 +128,16 @@ class CloudRunJobFinishedTrigger(BaseTrigger):
                         }
                     )
                 else:
-                    yield TriggerEvent(
-                        {
-                            "status": RunJobStatus.SUCCESS.value,
-                            "job_name": self.job_name,
-                        }
-                    )
+                    event_data = {
+                        "status": RunJobStatus.SUCCESS.value,
+                        "job_name": self.job_name,
+                    }
+                    # Include execution details to validate task completion
+                    if operation.response and operation.response.HasField("task_count"):
+                        event_data["task_count"] = operation.response.task_count
+                        event_data["succeeded_count"] = operation.response.succeeded_count
+                        event_data["failed_count"] = operation.response.failed_count
+                    yield TriggerEvent(event_data)
                 return
             elif operation.error.message:
                 raise AirflowException(f"Cloud Run Job error: {operation.error.message}")
