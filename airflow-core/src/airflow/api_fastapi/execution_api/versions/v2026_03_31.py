@@ -19,9 +19,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from cadwyn import VersionChange, schema
+from cadwyn import ResponseInfo, VersionChange, convert_response_to_previous_version_for, schema
 
-from airflow.api_fastapi.execution_api.datamodels.taskinstance import TIDeferredStatePayload
+from airflow.api_fastapi.execution_api.datamodels.taskinstance import (
+    DagRun,
+    TIDeferredStatePayload,
+    TIRunContext,
+)
 
 
 class ModifyDeferredTaskKwargsToJsonValue(VersionChange):
@@ -33,3 +37,34 @@ class ModifyDeferredTaskKwargsToJsonValue(VersionChange):
         schema(TIDeferredStatePayload).field("trigger_kwargs").had(type=dict[str, Any] | str),
         schema(TIDeferredStatePayload).field("next_kwargs").had(type=dict[str, Any]),
     )
+
+
+class RemoveUpstreamMapIndexesField(VersionChange):
+    """Remove upstream_map_indexes field from TIRunContext - now computed by Task SDK."""
+
+    description = __doc__
+
+    instructions_to_migrate_to_previous_version = (
+        schema(TIRunContext)
+        .field("upstream_map_indexes")
+        .existed_as(type=dict[str, int | list[int] | None] | None),
+    )
+
+    @convert_response_to_previous_version_for(TIRunContext)  # type: ignore[arg-type]
+    def add_upstream_map_indexes_field(response: ResponseInfo) -> None:  # type: ignore[misc]
+        """Add upstream_map_indexes field with None for older API versions."""
+        response.body["upstream_map_indexes"] = None
+
+
+class AddNoteField(VersionChange):
+    """Add note parameter to DagRun Model."""
+
+    description = __doc__
+
+    instructions_to_migrate_to_previous_version = (schema(DagRun).field("note").didnt_exist,)
+
+    @convert_response_to_previous_version_for(TIRunContext)  # type: ignore[arg-type]
+    def remove_note_field(response: ResponseInfo) -> None:  # type: ignore[misc]
+        """Remove note field for older API versions."""
+        if "dag_run" in response.body and isinstance(response.body["dag_run"], dict):
+            response.body["dag_run"].pop("note", None)

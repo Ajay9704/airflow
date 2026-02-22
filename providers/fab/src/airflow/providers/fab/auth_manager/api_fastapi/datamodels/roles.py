@@ -40,6 +40,12 @@ class ActionResource(BaseModel):
     resource: Resource
 
 
+class Role(BaseModel):
+    """Lightweight role reference used by /users schemas."""
+
+    name: str
+
+
 class RoleBody(StrictBaseModel):
     """Incoming payload for creating/updating a role."""
 
@@ -60,4 +66,11 @@ class RoleCollectionResponse(BaseModel):
     """Outgoing representation of a paginated collection of roles."""
 
     roles: list[RoleResponse]
+    total_entries: int
+
+
+class PermissionCollectionResponse(BaseModel):
+    """Outgoing representation of a paginated collection of permissions."""
+
+    permissions: list[ActionResource] = Field(default_factory=list, serialization_alias="actions")
     total_entries: int

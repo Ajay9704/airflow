@@ -1,3 +1,6 @@
+ <!-- SPDX-License-Identifier: Apache-2.0
+      https://www.apache.org/licenses/LICENSE-2.0 -->
+
 <!--
 Thank you for contributing!
 
@@ -16,7 +19,9 @@ In case of an existing issue, reference it using one of the following:
 * related: #ISSUE
 -->
 
-## Was generative AI tooling used to co-author this PR?
+---
+
+##### Was generative AI tooling used to co-author this PR?
 
 <!--
 If generative AI tooling has been used in the process of authoring this PR, please

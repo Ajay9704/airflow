@@ -22,6 +22,7 @@ from __future__ import annotations
 import contextlib
 import copy
 import dataclasses
+import functools
 import importlib
 import importlib.util
 import json
@@ -93,6 +94,7 @@ from airflow.task.priority_strategy import (
 from airflow.ti_deps.deps.ready_to_reschedule import ReadyToRescheduleDep
 from airflow.timetables.simple import NullTimetable, OnceTimetable
 from airflow.triggers.base import StartTriggerArgs
+from airflow.utils.types import DagRunType
 
 from tests_common.test_utils.config import conf_vars
 from tests_common.test_utils.markers import skip_if_force_lowest_dependencies_marker, skip_if_not_on_main
@@ -214,6 +216,7 @@ serialized_simple_dag_ground_truth = {
         "is_paused_upon_creation": False,
         "dag_id": "simple_dag",
         "deadline": None,
+        "allowed_run_types": None,
         "doc_md": "### DAG Tutorial Documentation",
         "fileloc": None,
         "_processor_dags_folder": (
@@ -1568,6 +1571,7 @@ class TestStringifiedDAGs:
             "pool_slots": 1,
             "priority_weight": 1,
             "queue": "default",
+            "render_template_as_native_obj": None,
             "resources": None,
             "retries": 0,
             "retry_delay": timedelta(0, 300),
@@ -2934,7 +2938,7 @@ def test_taskflow_expand_serde():
         },
         "_disallow_kwargs_override": False,
         "_expand_input_attr": "op_kwargs_expand_input",
-        "python_callable_name": qualname(x),
+        "python_callable_name": "test_taskflow_expand_serde.<locals>.x",
     }
 
     deserialized = BaseSerialization.deserialize(serialized)
@@ -3001,7 +3005,7 @@ def test_taskflow_expand_kwargs_serde(strict):
         "_task_module": "airflow.providers.standard.decorators.python",
         "task_type": "_PythonDecoratedOperator",
         "_operator_name": "@task",
-        "python_callable_name": qualname(x),
+        "python_callable_name": "test_taskflow_expand_kwargs_serde.<locals>.x",
         "partial_kwargs": {
             "op_args": [],
             "op_kwargs": {
@@ -3172,11 +3176,42 @@ def test_python_callable_in_partial_kwargs():
 
     serialized = OperatorSerialization.serialize_mapped_operator(operator)
     assert "python_callable" not in serialized["partial_kwargs"]
-    assert serialized["partial_kwargs"]["python_callable_name"] == qualname(empty_function)
+    assert serialized["partial_kwargs"]["python_callable_name"] == "empty_function"
 
     deserialized = OperatorSerialization.deserialize_operator(serialized)
     assert "python_callable" not in deserialized.partial_kwargs
-    assert deserialized.partial_kwargs["python_callable_name"] == qualname(empty_function)
+    assert deserialized.partial_kwargs["python_callable_name"] == "empty_function"
+
+
+def test_python_callable_name_uses_qualname_exclude_module():
+    """Test python_callable_name is stable across bundle version changes."""
+    from airflow.providers.standard.operators.python import PythonOperator
+
+    # Module-level function
+    op1 = PythonOperator(task_id="task1", python_callable=empty_function)
+    serialized1 = OperatorSerialization.serialize_operator(op1)
+    assert serialized1["python_callable_name"] == "empty_function"
+
+    # Nested function
+    def outer():
+        def inner():
+            pass
+
+        return inner
+
+    inner_func = outer()
+    op2 = PythonOperator(task_id="task2", python_callable=inner_func)
+    serialized2 = OperatorSerialization.serialize_operator(op2)
+    assert (
+        serialized2["python_callable_name"]
+        == "test_python_callable_name_uses_qualname_exclude_module.<locals>.outer.<locals>.inner"
+    )
+
+    # functools.partial
+    partial_func = functools.partial(empty_function, x=1)
+    op3 = PythonOperator(task_id="task3", python_callable=partial_func)
+    serialized3 = OperatorSerialization.serialize_operator(op3)
+    assert serialized3["python_callable_name"] == "empty_function"
 
 
 def test_handle_v1_serdag():
@@ -3799,6 +3834,50 @@ def test_email_optimization_removes_email_attrs_when_email_empty():
         # since email is not empty
         assert "email" in task_with_email_serialized
         assert task_with_email_serialized["email"] == "test@example.com"
+
+
+@pytest.mark.parametrize(
+    ("allowed_types", "expected_serialized", "expected_deserialized"),
+    [
+        pytest.param(
+            [DagRunType.SCHEDULED, DagRunType.MANUAL],
+            ["manual", "scheduled"],
+            frozenset([DagRunType.SCHEDULED, DagRunType.MANUAL]),
+            id="multiple_types",
+        ),
+        pytest.param(
+            [DagRunType.SCHEDULED],
+            ["scheduled"],
+            frozenset([DagRunType.SCHEDULED]),
+            id="single_type",
+        ),
+        pytest.param(
+            None,
+            None,
+            None,
+            id="none",
+        ),
+    ],
+)
+def test_dag_allowed_run_types_serialization(allowed_types, expected_serialized, expected_deserialized):
+    """Test that allowed_run_types round-trips through serialization correctly."""
+    dag = DAG(
+        dag_id="test_allowed_run_types",
+        start_date=datetime(2023, 1, 1),
+        schedule="@daily",
+        allowed_run_types=allowed_types,
+    )
+
+    serialized = DagSerialization.to_dict(dag)
+    dag_data = serialized["dag"]
+
+    if expected_serialized is None:
+        assert dag_data.get("allowed_run_types") is None
+    else:
+        assert dag_data["allowed_run_types"] == expected_serialized
+
+    deserialized_dag = DagSerialization.from_dict(serialized)
+    assert deserialized_dag.allowed_run_types == expected_deserialized
 
 
 def dummy_callback():
