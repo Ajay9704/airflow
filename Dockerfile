@@ -2029,8 +2029,8 @@ RUN bash /scripts/docker/install_mysql.sh prod \
     && mkdir -pv "${AIRFLOW_HOME}" \
     && mkdir -pv "${AIRFLOW_HOME}/dags" \
     && mkdir -pv "${AIRFLOW_HOME}/logs" \
-    && chown -R airflow:0 "${AIRFLOW_USER_HOME_DIR}" "${AIRFLOW_HOME}" \
-    && chmod -R g+rw "${AIRFLOW_USER_HOME_DIR}" "${AIRFLOW_HOME}" \
+    && chgrp -R 0 "${AIRFLOW_USER_HOME_DIR}" "${AIRFLOW_HOME}" \
+    && chmod -R g=u "${AIRFLOW_USER_HOME_DIR}" "${AIRFLOW_HOME}" \
     && find "${AIRFLOW_HOME}" -executable ! -type l -print0 | xargs --null chmod g+x \
     && find "${AIRFLOW_USER_HOME_DIR}" -executable ! -type l -print0 | xargs --null chmod g+x
 
