@@ -30,7 +30,7 @@ The following technical terms should **remain in English** in Thai translations:
 - **Graph View** - Keep as "Graph View" or translate as "มุมมองกราฟ"
 - **Grid View** - Keep as "Grid View" or translate as "มุมมองกริด"
 - **Calendar View** - Keep as "Calendar View" or translate as "มุมมองปฏิทิน"
-- **Gantt Chart** - Keep as "Gantt Chart" or translate as "แผนภูมิกันต์"
+- **Gantt Chart** - Keep as "Gantt Chart" or translate as "แผนภูมิแกนต์"
 
 ### Code and Technical References
 
