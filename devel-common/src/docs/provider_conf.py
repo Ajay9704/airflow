@@ -313,6 +313,21 @@ TASK_SDK_SRC_PATH = AIRFLOW_REPO_ROOT_PATH / "task-sdk" / "src" / "airflow"
 if TASK_SDK_SRC_PATH.exists():
     autoapi_dirs.append(TASK_SDK_SRC_PATH.as_posix())
 
+# Add common-compat source path so autoapi can find compat module classes
+COMMON_COMPAT_SRC_PATH = (
+    AIRFLOW_REPO_ROOT_PATH
+    / "providers"
+    / "common"
+    / "compat"
+    / "src"
+    / "airflow"
+    / "providers"
+    / "common"
+    / "compat"
+)
+if COMMON_COMPAT_SRC_PATH.exists():
+    autoapi_dirs.append(COMMON_COMPAT_SRC_PATH.as_posix())
+
 # A list of patterns to ignore when finding files
 autoapi_ignore = BASIC_AUTOAPI_IGNORE_PATTERNS
 
@@ -332,9 +347,10 @@ autoapi_ignore.extend(
 
 # Here we remove all other providers from the autoapi list, only leaving the current provider,
 # Otherwise all the other provider indexes will no be found in any TOC.
+# Exception: common provider is needed for compat layer (BaseSensorOperator, etc.)
 
 for p in load_package_data(include_suspended=True):
-    if p["package-name"] == PACKAGE_NAME:
+    if p["package-name"] == PACKAGE_NAME or p["package-name"] == "apache-airflow-providers-common":
         continue
     autoapi_ignore.extend((p["package-dir"] + "/*", p["system-tests-dir"] + "/*"))
 
