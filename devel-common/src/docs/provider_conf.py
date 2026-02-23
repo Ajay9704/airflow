@@ -307,6 +307,12 @@ viewcode_follow_imported_members = True
 # your API documentation from.
 autoapi_dirs = [BASE_PROVIDER_SRC_PATH.as_posix()]
 
+# Add task-sdk source path so autoapi can find SDK classes like BaseSensorOperator
+# This enables proper cross-referencing between provider docs and task-sdk docs
+TASK_SDK_SRC_PATH = AIRFLOW_REPO_ROOT_PATH / "task-sdk" / "src" / "airflow"
+if TASK_SDK_SRC_PATH.exists():
+    autoapi_dirs.append(TASK_SDK_SRC_PATH.as_posix())
+
 # A list of patterns to ignore when finding files
 autoapi_ignore = BASIC_AUTOAPI_IGNORE_PATTERNS
 
