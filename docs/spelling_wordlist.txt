@@ -238,7 +238,7 @@ cancelled
 Cancelling
 carbonite
 cas
-Cassanda
+Cassandra
 cassandra
 casted
 Catchup
@@ -373,6 +373,7 @@ CSRFProtect
 css
 csv
 Ctl
+ctl
 ctor
 Ctrl
 cubeName
@@ -432,6 +433,7 @@ DataFusion
 Datafusion
 datafusion
 Datalake
+datamodel
 Datanodes
 datapipe
 Dataplex
@@ -479,7 +481,7 @@ de
 Debounce
 debuggability
 declaratively
-decomissioning
+decommissioning
 Decrypt
 decrypt
 decrypted
@@ -733,7 +735,7 @@ fluentd
 fmt
 fn
 fo
-followsa
+follows
 forecasted
 forkserver
 formatter
