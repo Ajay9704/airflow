@@ -288,7 +288,7 @@ try:
         f"https://airflow.apache.org/docs/task-sdk/{task_sdk_version}/",
         (f"https://airflow.apache.org/docs/task-sdk/{task_sdk_version}/objects.inv",),
     )
-except Exception:
+except ModuleNotFoundError:
     # If airflow.sdk is not available, skip adding the intersphinx mapping
     # This can happen when building docs in environments where task-sdk is not installed
     pass
