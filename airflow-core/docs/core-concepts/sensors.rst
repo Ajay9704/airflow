@@ -69,7 +69,7 @@ The following parameters control sensor behavior across all implementations:
 
 ``soft_fail``
     When ``True``, timeout causes the sensor to be marked as ``SKIPPED`` instead of ``FAILED``.
-    This is useful when you want non-critical sensors to timeout gracefully without failing the DAG.
+    This is useful when you want non-critical sensors to timeout gracefully without failing the Dag.
 
 ``exponential_backoff``
     When enabled, increases the wait time between pokes exponentially, rather than using a fixed
