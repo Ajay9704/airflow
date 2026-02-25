@@ -1,9 +1,11 @@
  <!-- SPDX-License-Identifier: Apache-2.0
       https://www.apache.org/licenses/LICENSE-2.0 -->
 
-# Thai (th) Translation Guidelines for Apache Airflow
+# Thai (th)
 
 This document provides Thai-specific guidelines for translating Apache Airflow terminology and documentation.
+
+This document inherits all global rules from the parent SKILL.md.
 
 ## Terms to Keep in English
 
@@ -51,7 +53,7 @@ The following technical terms should **remain in English** in Thai translations:
 | Connection | การเชื่อมต่อ | Standard translation |
 | Variable | ตัวแปร | Standard translation |
 | Provider | ผู้ให้บริการ | Standard translation |
-| Trigger | ทริกเกอร์ | Transliterated (ตริกเกอร์) |
+| Trigger | ทริกเกอร์ | Transliterated |
 | Scheduler | ตัวกำหนดการ | Standard translation |
 | Executor | ผู้ดำเนินการ | Standard translation |
 | Worker | ผู้ปฏิบัติงาน | Standard translation |
@@ -62,7 +64,7 @@ The following technical terms should **remain in English** in Thai translations:
 
 | English | Thai | Notes |
 |---------|------|-------|
-| Run | รัน / ดำเนินการ | Use "รัน" (transliterated) or "ดำเนินการ" |
+| Run | รัน / ทำงาน | Use "รัน" (transliterated) or "ทำงาน" |
 | Execute | ดำเนินการ | Standard translation |
 | Clear | ล้าง | Standard translation |
 | Retry | ลองใหม่ | Standard translation |
@@ -231,7 +233,7 @@ In formal documentation and UI, polite particles may be used:
 - ครับ (khrap) - for male speakers
 - ค่ะ (kha) - for female speakers
 
-However, these are typically omitted in technical documentation to maintain conciseness.
+However, these are typically omitted in technical documentation to maintain conciseness. In UI text, polite particles are generally not used to maintain a gender-neutral tone.
 
 ## Resources for Thai Translators
 
@@ -240,6 +242,7 @@ However, these are typically omitted in technical documentation to maintain conc
 3. **Glossary**: Maintain consistency with previously translated Airflow content
 4. **Testing**: Test translations to ensure proper rendering and readability
 5. **Community**: Refer to Thai technical documentation communities for consistency
+6. **Existing Thai Locale Files**: Reference the existing Thai locale files as the authoritative terminology source for consistency with established translations
 
 ## Examples
 
@@ -282,7 +285,7 @@ msgstr[0] "%d งาน"
 msgstr[1] "%d งาน"
 ```
 
-Both singular and plural forms use the same translation in Thai. The number suffix remains the same regardless of quantity.
+Both singular and plural forms use the same translation in Thai. The number suffix remains the same regardless of quantity. For plurality context, words like "ทั้งหมด" (all) can be used to express plurality when appropriate.
 
 ## Notes
 
