@@ -92,7 +92,7 @@ class TestCloudBatchJobFinishedTrigger:
 
         mock_hook.return_value.get_operation = _mock_operation
         generator = trigger.run()
-        actual = await generator.asend(None)  # type:ignore[attr-defined]
+        actual = await generator.asend(None)  # type: ignore[attr-defined]
         assert (
             TriggerEvent(
                 {
@@ -127,7 +127,7 @@ class TestCloudBatchJobFinishedTrigger:
 
         mock_hook.return_value.get_operation = _mock_operation
         generator = trigger.run()
-        actual = await generator.asend(None)  # type:ignore[attr-defined]
+        actual = await generator.asend(None)  # type: ignore[attr-defined]
         assert (
             TriggerEvent(
                 {
@@ -160,7 +160,7 @@ class TestCloudBatchJobFinishedTrigger:
         mock_hook.return_value.get_operation = _mock_operation
         generator = trigger.run()
 
-        actual = await generator.asend(None)  # type:ignore[attr-defined]
+        actual = await generator.asend(None)  # type: ignore[attr-defined]
         assert (
             TriggerEvent(
                 {
@@ -191,7 +191,7 @@ class TestCloudBatchJobFinishedTrigger:
         mock_hook.return_value.get_operation = _mock_operation
 
         generator = trigger.run()
-        actual = await generator.asend(None)  # type:ignore[attr-defined]
+        actual = await generator.asend(None)  # type: ignore[attr-defined]
 
         assert (
             TriggerEvent(

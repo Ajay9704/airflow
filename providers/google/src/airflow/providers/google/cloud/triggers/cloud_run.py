@@ -21,7 +21,6 @@ from collections.abc import AsyncIterator, Sequence
 from enum import Enum
 from typing import Any, Literal
 
-from airflow.providers.common.compat.sdk import AirflowException
 from airflow.providers.google.cloud.hooks.cloud_run import CloudRunAsyncHook
 from airflow.triggers.base import BaseTrigger, TriggerEvent
 
@@ -140,7 +139,7 @@ class CloudRunJobFinishedTrigger(BaseTrigger):
                     yield TriggerEvent(event_data)
                 return
             elif operation.error.message:
-                raise AirflowException(f"Cloud Run Job error: {operation.error.message}")
+                raise RuntimeError(f"Cloud Run Job error: {operation.error.message}")
 
             if timeout is not None:
                 timeout -= self.polling_period_seconds
